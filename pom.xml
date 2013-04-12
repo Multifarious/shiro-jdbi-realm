@@ -9,6 +9,7 @@
     <version>0.0.1-SNAPSHOT</version>
 
     <scm>
+        <url>https://github.com/Multifarious/shiro-jdbi-realm.git</url>
         <developerConnection>scm:git:git@github.com:Multifarious/shiro-jdbi-realm.git</developerConnection>
     </scm>
 
@@ -101,13 +102,13 @@
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>jcl-over-slf4j</artifactId>
-            <version>1.7.4</version>
+            <version>${slf4j.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>jul-to-slf4j</artifactId>
-            <version>1.7.4</version>
+            <version>${slf4j.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
