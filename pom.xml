@@ -147,6 +147,13 @@
                     <include>README.md</include>
                 </includes>
             </resource>
+            <resource>
+                <directory>src/main/resources/liquibase</directory>
+                <targetPath>META-INF/liquibase</targetPath>
+                <includes>
+                    <include>*.*</include>
+                </includes>
+            </resource>
         </resources>
 
         <pluginManagement>
