@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-2.0.xsd">
+    <!--
+    Generated via liquibase's generateChangeLog tool
+    -->
+    <changeSet author="ezra (generated)" id="1364077307681-1">
+        <createTable tableName="ROLES">
+            <column name="ROLE_NAME" type="VARCHAR(100)">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_ROLES"/>
+            </column>
+        </createTable>
+        <createTable tableName="ROLES_PERMISSIONS">
+            <column name="ROLE_NAME" type="VARCHAR(100)">
+                <constraints nullable="false" references="ROLES (ROLE_NAME)" foreignKeyName="FK_ROLES_PERMISSIONS_ROLES" deleteCascade="true"/>
+            </column>
+            <column name="PERMISSION" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <createTable tableName="USERS">
+            <column autoIncrement="true" name="USER_ID" type="INT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_USERS" />
+            </column>
+            <column name="USERNAME" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="PASSWORD" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <createTable tableName="USERS_ROLES">
+            <column name="USER_ID" type="INT">
+                <constraints nullable="false" references="USERS (USER_ID)" foreignKeyName="FK_USERS_ROLES_USERS" deleteCascade="true"/>
+            </column>
+            <column name="ROLE_NAME" type="VARCHAR(100)">
+                <constraints nullable="false" references="ROLES (ROLE_NAME)" foreignKeyName="FK_USERS_ROLES_ROLES" deleteCascade="false"/>
+            </column>
+        </createTable>
+        <addPrimaryKey columnNames="ROLE_NAME, PERMISSION" constraintName="PK_ROLES_PERMISSIONS" tableName="ROLES_PERMISSIONS"/>
+        <addPrimaryKey columnNames="USER_ID, ROLE_NAME" constraintName="PK_USERS_ROLES" tableName="USERS_ROLES"/>
+        <createIndex indexName="UC_USERNAME_INDEX_4" tableName="USERS" unique="true">
+            <column name="USERNAME"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>
