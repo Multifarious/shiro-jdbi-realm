@@ -1,7 +1,6 @@
 package io.ifar.security.dao;
 
-import io.ifar.security.realm.model.Role;
-import io.ifar.security.realm.model.User;
+import io.ifar.security.realm.model.*;
 
 import java.util.Iterator;
 import java.util.Set;

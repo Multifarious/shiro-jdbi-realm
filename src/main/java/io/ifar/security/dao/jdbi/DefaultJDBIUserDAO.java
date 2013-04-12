@@ -16,8 +16,7 @@ import org.skife.jdbi.v2.sqlobject.mixins.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import io.ifar.security.dao.UserDAO;
-import io.ifar.security.realm.model.Role;
-import io.ifar.security.realm.model.User;
+import io.ifar.security.realm.model.*;
 
 import java.util.*;
 
