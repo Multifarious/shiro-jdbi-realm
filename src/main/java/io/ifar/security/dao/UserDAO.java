@@ -11,7 +11,7 @@ import java.util.Set;
  * The UserDAO supports create/update/delete operations for User objects and association of same with Role objects.
  * Note that it does not, however, support management of the Role objects themselves nor the associated Permissions.
  */
-public interface UserDAO {
+public interface UserDAO extends UserSecurityDAO {
 
     /**
      * Get by primary key value.
@@ -19,19 +19,10 @@ public interface UserDAO {
     User getUser(Long userId);
 
     /**
-     * Lookup by username.  Usernames are unique across User records in the backing store.
-     * Should be the same as calling the two argument version with the second argument set to true.
-     */
-    User findUser(String username);
-
-    /**
      * Lookup by username.  Return the associated Roles if the withRoles argument is true; otherwise
      * just fetch the non-Collection User fields: id and password.
      */
     User findUser(String username, boolean withRoles);
-
-    Set<Role> getUserRoles(Long userId);
-    Set<Role> getUserRoles(String username);
 
     Iterator<String> findAllUsernames();
 

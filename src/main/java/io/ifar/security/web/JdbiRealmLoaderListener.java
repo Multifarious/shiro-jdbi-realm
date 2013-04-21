@@ -1,6 +1,6 @@
 package io.ifar.security.web;
 
-import io.ifar.security.dao.UserDAO;
+import io.ifar.security.dao.UserSecurityDAO;
 import io.ifar.security.realm.JdbiShiroRealm;
 import org.apache.shiro.mgt.RealmSecurityManager;
 import org.apache.shiro.realm.Realm;
@@ -114,14 +114,14 @@ public class JdbiRealmLoaderListener implements ServletContextListener {
     @Override
     public void contextDestroyed(ServletContextEvent sce) {
         RealmSecurityManager rsm = getRealmSecurityManager(sce);
-        UserDAO uDAO = null;
+        UserSecurityDAO uDAO = null;
         for (Realm r : rsm.getRealms())
             if (r instanceof JdbiShiroRealm) {
                 LOG.info("closing JdbiShiroRealm's UserDAO instance/s.", r.getName());
-                uDAO = ((JdbiShiroRealm) r).getUserDAO();
+                uDAO = ((JdbiShiroRealm) r).getUserSecurityDAO();
                 if (uDAO != null) {
                     jdbi.close(uDAO);
-                    ((JdbiShiroRealm) r).setUserDAO(null);
+                    ((JdbiShiroRealm) r).setUserSecurityDAO(null);
                 }
                 if (whichRealm == RealmSelector.FIRST) {
                     break;

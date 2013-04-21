@@ -264,7 +264,7 @@ public class TestUserDAO {
         LOG.info("Freshly minted user: {}", u);
 
         User fromDb = harness.getUserDAO().findUser("txFOO");
-       assertEquals(u, fromDb);
+        assertEquals(u, fromDb);
 
         LOG.info("User seen via other DAO: {}", fromDb);
         assertEquals("No roles should have been saved.", 0, fromDb.getRoles().size());

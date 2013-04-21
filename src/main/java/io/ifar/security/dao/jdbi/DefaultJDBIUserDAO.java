@@ -6,6 +6,7 @@ import com.google.common.collect.Sets;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import org.apache.shiro.authc.AuthenticationException;
 import org.skife.jdbi.v2.TransactionIsolationLevel;
 import org.skife.jdbi.v2.sqlobject.Bind;
 import org.skife.jdbi.v2.sqlobject.SqlQuery;
@@ -31,20 +32,24 @@ public abstract class DefaultJDBIUserDAO implements UserDAO, Transactional<Defau
                     + " roles.role_name AS roleName, roles_permissions.permission AS permission"
                     + " FROM users left join users_roles on users.user_id = users_roles.user_id"
                     + " left join roles on users_roles.role_name = roles.role_name"
-                    + " left join roles_permissions on roles.role_name = roles_permissions.role_name";
+                    + " left join roles_permissions on roles.role_name = roles_permissions.role_name"
+                    + " WHERE users.enabled AND (roles.enabled OR roles.enabled IS NULL) AND"
+            ;
 
     private final static String RolesPermissionsBaseSelectPrefix =
             "SELECT roles.role_name AS roleName, roles_permissions.permission AS permission"
                     + " FROM users_roles left join roles on users_roles.role_name = roles.role_name"
-                    + " left join roles_permissions on roles.role_name = roles_permissions.role_name";
+                    + " left join roles_permissions on roles.role_name = roles_permissions.role_name"
+                    + " WHERE roles.enabled AND"
+            ;
 
     private final static Logger LOG = LoggerFactory.getLogger(DefaultJDBIUserDAO.class);
 
-    @SqlQuery(UserRolesPermissionsBaseSelectPrefix + " WHERE users.user_id = :userId")
+    @SqlQuery(UserRolesPermissionsBaseSelectPrefix + " users.user_id = :userId")
     @MapResultAsBean
     protected abstract Iterator<UserRolePermissionJoinRow> getUserWithRolesAndPermissions(@Bind("userId") Long userId);
 
-    @SqlQuery(UserRolesPermissionsBaseSelectPrefix + " WHERE users.username = :username")
+    @SqlQuery(UserRolesPermissionsBaseSelectPrefix + " users.username = :username")
     @MapResultAsBean
     protected abstract Iterator<UserRolePermissionJoinRow> findUserWithRolesAndPermissions(@Bind("username") String username);
 
@@ -97,23 +102,37 @@ public abstract class DefaultJDBIUserDAO implements UserDAO, Transactional<Defau
         return extractObjectGraphFromJoinResults(getUserWithRolesAndPermissions(userId));
     }
 
-    @Override
     @Transaction(value = TransactionIsolationLevel.READ_COMMITTED)
     public User findUser(String username) {
         checkArgument(!Strings.isNullOrEmpty(username), "findUser() requires a non-null, non-empty username parameter.");
         return extractObjectGraphFromJoinResults(findUserWithRolesAndPermissions(username));
     }
 
-    @SqlQuery("SELECT user_Id AS id, username, password FROM users WHERE username = :username")
+    @SqlQuery("SELECT user_Id AS id, username, password FROM users WHERE enabled AND username = :username")
     @MapResultAsBean
-    protected abstract User findUserWithoutRoles(@Bind("username") String username);
+    @Transaction(value = TransactionIsolationLevel.READ_COMMITTED)
+    protected abstract Iterator<User> findUsersWithoutRoles(@Bind("username") String username);
+
+    @Override
+    public User findUserWithoutRoles(String username) {
+        User u = null;
+        Iterator<User> users = findUsersWithoutRoles(username);
+        while (users.hasNext()) {
+            if (u != null)
+            {
+                throw new AuthenticationException("Username must be unique in the backing store. Multiple users found for username " + username);
+            }
+            u = users.next();
+        }
+        return u;
+    }
 
     @Override
     public User findUser(String username, boolean withRoles) {
         return withRoles ? findUser(username) : findUserWithoutRoles(username);
     }
 
-    @SqlQuery(RolesPermissionsBaseSelectPrefix + " WHERE users_roles.user_id = :userId")
+    @SqlQuery(RolesPermissionsBaseSelectPrefix + " users_roles.user_id = :userId")
     @MapResultAsBean
     protected abstract Iterator<UserRolePermissionJoinRow> getUserRolesAndPermissions(@Bind("userId") Long userId);
 

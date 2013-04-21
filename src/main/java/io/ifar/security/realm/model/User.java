@@ -10,7 +10,7 @@ import java.util.Set;
  *
  * @see org.apache.shiro.subject.Subject
  */
-public class User {
+public class User extends BaseEntity {
 
     private Long id;
     private String username;
@@ -120,13 +120,13 @@ public class User {
      * Don't show value of password fields.
      */
     @Override
-    public String toString() {
-        return Objects.toStringHelper(this.getClass().getSimpleName() + '[' + System.identityHashCode(this) + ']')
+    protected Objects.ToStringHelper toStringHelper() {
+        return super.toStringHelper()
                 .add("id", id)
                 .add("username", username)
                 .add("password", "********")
                 .add("roles", roles)
-                .toString();
+                ;
     }
 
 }

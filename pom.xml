@@ -6,7 +6,7 @@
 
     <groupId>io.ifar</groupId>
     <artifactId>shiro-jdbi-realm</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>0.0.2-SNAPSHOT</version>
 
     <scm>
         <url>https://github.com/Multifarious/shiro-jdbi-realm.git</url>

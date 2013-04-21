@@ -8,6 +8,15 @@
             <column name="ROLE_NAME" type="VARCHAR(100)">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="PK_ROLES"/>
             </column>
+            <column name="enabled" type="boolean" defaultValueBoolean="true">
+                <constraints nullable="false" />
+            </column>
+            <column name="created_at" type="timestamp" defaultValueComputed="NOW()">
+                <constraints nullable="false" />
+            </column>
+            <column name="updated_at" type="timestamp">
+                <constraints nullable="true" />
+            </column>
         </createTable>
         <createTable tableName="ROLES_PERMISSIONS">
             <column name="ROLE_NAME" type="VARCHAR(100)">
@@ -15,6 +24,12 @@
             </column>
             <column name="PERMISSION" type="VARCHAR(100)">
                 <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="timestamp" defaultValueComputed="NOW()">
+                <constraints nullable="false" />
+            </column>
+            <column name="updated_at" type="timestamp">
+                <constraints nullable="true" />
             </column>
         </createTable>
         <createTable tableName="USERS">
@@ -27,6 +42,15 @@
             <column name="PASSWORD" type="VARCHAR(255)">
                 <constraints nullable="false"/>
             </column>
+            <column name="enabled" type="boolean" defaultValueBoolean="true">
+                <constraints nullable="false" />
+            </column>
+            <column name="created_at" type="timestamp" defaultValueComputed="NOW()">
+                <constraints nullable="false" />
+            </column>
+            <column name="updated_at" type="timestamp">
+                <constraints nullable="true" />
+            </column>
         </createTable>
         <createTable tableName="USERS_ROLES">
             <column name="USER_ID" type="INT">
@@ -34,6 +58,12 @@
             </column>
             <column name="ROLE_NAME" type="VARCHAR(100)">
                 <constraints nullable="false" references="ROLES (ROLE_NAME)" foreignKeyName="FK_USERS_ROLES_ROLES" deleteCascade="false"/>
+            </column>
+            <column name="created_at" type="timestamp" defaultValueComputed="NOW()">
+                <constraints nullable="false" />
+            </column>
+            <column name="updated_at" type="timestamp">
+                <constraints nullable="true" />
             </column>
         </createTable>
         <addPrimaryKey columnNames="ROLE_NAME, PERMISSION" constraintName="PK_ROLES_PERMISSIONS" tableName="ROLES_PERMISSIONS"/>

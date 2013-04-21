@@ -10,7 +10,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 /**
  * This class represents a Role that can be assigned to a {@link User}.
  */
-public class Role {
+public class Role extends BaseEntity {
     private final String name;
     private final Set<String> permissions;
 
@@ -60,11 +60,11 @@ public class Role {
     }
 
     @Override
-    public String toString() {
-        return Objects.toStringHelper(this.getClass().getSimpleName() + '[' + System.identityHashCode(this) + ']')
+    protected Objects.ToStringHelper toStringHelper() {
+        return Objects.toStringHelper(this.getClass().getSimpleName())
                 .add("name", name)
                 .add("permissions", permissions)
-                .toString();
+                ;
     }
 
 }
