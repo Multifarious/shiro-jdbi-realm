@@ -16,7 +16,7 @@ import org.junit.Before;
 
 /**
  * Project: security
- * User: ezra
+ * DefaultUserImpl: ezra
  * Date: 4/3/13
  */
 public abstract class AbstractShiroTest {

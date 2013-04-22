@@ -1,5 +1,6 @@
 package io.ifar.security.dao.jdbi;
 
+import io.ifar.security.dao.UserSecurityDAO;
 import liquibase.Liquibase;
 import liquibase.database.jvm.HsqlConnection;
 import liquibase.logging.LogFactory;
@@ -18,7 +19,7 @@ import java.util.Properties;
 
 /**
  * Project: security
- * User: ezra
+ * DefaultUserImpl: ezra
  * Date: 3/26/13
  */
 public class DatabaseUtils {
@@ -45,7 +46,8 @@ public class DatabaseUtils {
 
     protected Properties dbProperties = null;
     protected DBI dbi;
-    protected DefaultJDBIUserDAO userDAO;
+    protected DefaultJdbiUserDAO userDAO;
+    protected DefaultJdbiUserSecurityDAO userSecurityDAO;
 
     private void loadProperties(String resourcePath) {
         InputStream propStream = null;
@@ -121,7 +123,8 @@ public class DatabaseUtils {
         performDatabaseSetupOrClean(true);
 
         dbi = new DBI(getJdbcConnectionString(), getDbUsername(), getDbPassword());
-        userDAO = dbi.onDemand(DefaultJDBIUserDAO.class);
+        userDAO = dbi.onDemand(DefaultJdbiUserDAO.class);
+        userSecurityDAO = dbi.onDemand(DefaultJdbiUserSecurityDAO.class);
     }
 
     /**
@@ -134,6 +137,7 @@ public class DatabaseUtils {
             loadProperties(DB_PROPERTIES_FILE_PATH);
         }
         performDatabaseSetupOrClean(false);
+        dbi.close(userSecurityDAO);
         dbi.close(userDAO);
     }
 
@@ -141,7 +145,11 @@ public class DatabaseUtils {
         return dbi;
     }
 
-    public DefaultJDBIUserDAO getUserDAO() {
+    public DefaultJdbiUserDAO getUserDAO() {
         return userDAO;
+    }
+
+    public UserSecurityDAO getUserSecurityDAO() {
+        return userSecurityDAO;
     }
 }

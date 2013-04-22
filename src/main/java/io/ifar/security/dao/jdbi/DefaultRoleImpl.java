@@ -1,6 +1,7 @@
-package io.ifar.security.realm.model;
+package io.ifar.security.dao.jdbi;
 
 import com.google.common.base.Objects;
+import io.ifar.security.realm.model.ISecurityRole;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -8,27 +9,29 @@ import java.util.Set;
 import static com.google.common.base.Preconditions.checkArgument;
 
 /**
- * This class represents a Role that can be assigned to a {@link User}.
+ * This class represents a DefaultRoleImpl that can be assigned to a {@link DefaultUserImpl}.
  */
-public class Role extends BaseEntity {
+public class DefaultRoleImpl implements ISecurityRole {
     private final String name;
     private final Set<String> permissions;
 
-    public Role(String name) {
+    public DefaultRoleImpl(String name) {
         this(name, null);
     }
 
-    public Role(String name, Set<String> permissions)
+    public DefaultRoleImpl(String name, Set<String> permissions)
     {
-        checkArgument(name != null, "A Role's name cannot be null.");
+        checkArgument(name != null, "A DefaultRoleImpl's name cannot be null.");
         this.name = name;
         this.permissions = (permissions != null ? permissions : new HashSet<String>());
     }
 
+    @Override
     public String getName() {
         return name;
     }
 
+    @Override
     public Set<String> getPermissions() {
         return permissions;
     }
@@ -46,9 +49,9 @@ public class Role extends BaseEntity {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof Role)) return false;
+        if (!(o instanceof DefaultRoleImpl)) return false;
 
-        Role role = (Role) o;
+        DefaultRoleImpl role = (DefaultRoleImpl) o;
         return (name.equals(role.name)) && (permissions.equals(role.permissions));
     }
 
@@ -60,6 +63,10 @@ public class Role extends BaseEntity {
     }
 
     @Override
+    public String toString() {
+        return toStringHelper().toString();
+    }
+
     protected Objects.ToStringHelper toStringHelper() {
         return Objects.toStringHelper(this.getClass().getSimpleName())
                 .add("name", name)

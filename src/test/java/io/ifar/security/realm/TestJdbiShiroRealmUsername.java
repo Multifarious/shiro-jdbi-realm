@@ -1,7 +1,8 @@
 package io.ifar.security.realm;
 
-import io.ifar.security.realm.model.Role;
-import io.ifar.security.realm.model.User;
+import io.ifar.security.dao.jdbi.DefaultRoleImpl;
+import io.ifar.security.dao.jdbi.DefaultUserImpl;
+import io.ifar.security.realm.model.ISecurityRole;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -13,7 +14,7 @@ import static org.junit.Assert.*;
 
 /**
  * Project: security
- * User: ezra
+ * DefaultUserImpl: ezra
  * Date: 4/3/13
  */
 public class TestJdbiShiroRealmUsername extends TestJdbiShiroRealm {
@@ -39,10 +40,10 @@ public class TestJdbiShiroRealmUsername extends TestJdbiShiroRealm {
         return "AClearPassword#456";
     }
 
-    protected Set<Role> getRoles()
+    protected Set<ISecurityRole> getRoles()
     {
         // Permissions aren't involved in user creation, just the role name
-        return Collections.singleton(new Role("admin"));
+        return Collections.<ISecurityRole>singleton(new DefaultRoleImpl("admin"));
     }
 
     // Should be fine to have the username be the principal.
@@ -50,7 +51,7 @@ public class TestJdbiShiroRealmUsername extends TestJdbiShiroRealm {
         realm.setPrincipalValueFields(Arrays.asList(JdbiShiroRealm.PrincipalValueField.USERNAME));
     }
 
-    protected void checkStoredPrincipal(User u, Object p) {
+    protected void checkStoredPrincipal(DefaultUserImpl u, Object p) {
         assertEquals("CurrentUser is expected to store the user's username as the principal.", u.getUsername(), p);
     }
 

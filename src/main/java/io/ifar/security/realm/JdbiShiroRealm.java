@@ -5,7 +5,7 @@ import static com.google.common.base.Preconditions.checkState;
 
 import com.google.common.base.Strings;
 import io.ifar.security.dao.UserSecurityDAO;
-import io.ifar.security.dao.jdbi.DefaultJDBIUserDAO;
+import io.ifar.security.dao.jdbi.DefaultJdbiUserSecurityDAO;
 import org.apache.shiro.authc.*;
 import org.apache.shiro.authc.credential.CredentialsMatcher;
 import org.apache.shiro.authc.credential.PasswordMatcher;
@@ -23,9 +23,9 @@ import io.ifar.security.realm.model.*;
 import java.util.*;
 
 /**
- * A Shiro security realm with User (Subject) data provided by a DAO implemented via JDBI.
+ * A Shiro security realm with DefaultUserImpl (Subject) data provided by a DAO implemented via JDBI.
  *
- * User: eze@ifar.ifario.us
+ * DefaultUserImpl: eze@ifar.ifario.us
  * Date: 3/26/13
  */
 public class JdbiShiroRealm extends AuthorizingRealm {
@@ -33,7 +33,7 @@ public class JdbiShiroRealm extends AuthorizingRealm {
     private static final Logger LOG = LoggerFactory.getLogger(JdbiShiroRealm.class);
 
     /**
-     * Which fields from the User instance to provide as Principal identifiers to Shiro.
+     * Which fields from the DefaultUserImpl instance to provide as Principal identifiers to Shiro.
      */
     public static enum PrincipalValueField
     {
@@ -43,6 +43,7 @@ public class JdbiShiroRealm extends AuthorizingRealm {
     protected UserSecurityDAO userSecurityDAO = null;
     protected List<PrincipalValueField> principalValueFields = Arrays.asList(PrincipalValueField.USER_ID);
     protected boolean didAuthentication = false;
+    protected boolean passwordRequired = true;
 
     /**
      * Creates a new instance with no UserDAO. Calls {@link #JdbiShiroRealm(io.ifar.security.dao.UserSecurityDAO)} passing in null.
@@ -56,12 +57,12 @@ public class JdbiShiroRealm extends AuthorizingRealm {
 
     /**
      * Create a JdbiShiroRealm using the provided DBI instance.  An onDemand UserDAO will be created
-     * based on the {@link DefaultJDBIUserDAO} class and used to call {@link #JdbiShiroRealm(io.ifar.security.dao.UserSecurityDAO)}.
+     * based on the {@link DefaultJdbiUserSecurityDAO} class and used to call {@link #JdbiShiroRealm(io.ifar.security.dao.UserSecurityDAO)}.
      * @param dbi  DBI instance to use to create a UserDAO.
      */
     public JdbiShiroRealm(DBI dbi)
     {
-         this(dbi.onDemand(DefaultJDBIUserDAO.class));
+         this(dbi.onDemand(DefaultJdbiUserSecurityDAO.class));
     }
 
     /**
@@ -79,7 +80,7 @@ public class JdbiShiroRealm extends AuthorizingRealm {
      * Calls {@link AuthorizingRealm#AuthorizingRealm(org.apache.shiro.authc.credential.CredentialsMatcher)}
      * passing in {@code matcher}.  If {@code userSecurityDAO} is not null, it is set via {@link #setUserSecurityDAO(io.ifar.security.dao.UserSecurityDAO)}}.
      * @param matcher the {@link CredentialsMatcher} to use for authenticating users.
-     * @param userSecurityDAO the {@link UserSecurityDAO} to use for looking up {@link User}s.
+     * @param userSecurityDAO the {@link UserSecurityDAO} to use for looking up {@link io.ifar.security.dao.jdbi.DefaultUserImpl}s.
      */
     public JdbiShiroRealm(CredentialsMatcher matcher, UserSecurityDAO userSecurityDAO)
     {
@@ -107,7 +108,7 @@ public class JdbiShiroRealm extends AuthorizingRealm {
 
     public void setDbi(DBI dbi)
     {
-        setUserSecurityDAO((dbi == null) ? null : dbi.onDemand(DefaultJDBIUserDAO.class));
+        setUserSecurityDAO((dbi == null) ? null : dbi.onDemand(DefaultJdbiUserSecurityDAO.class));
     }
 
     public void setUserSecurityDAO(UserSecurityDAO UserSecurityDAO) {
@@ -116,6 +117,18 @@ public class JdbiShiroRealm extends AuthorizingRealm {
 
     public UserSecurityDAO getUserSecurityDAO() {
         return userSecurityDAO;
+    }
+
+    /**
+     * Whether or not a password must be provided when performing Authentication.
+     * @return default value is {@code true}.
+     */
+    public boolean isPasswordRequired() {
+        return passwordRequired;
+    }
+
+    public void setPasswordRequired(boolean passwordRequired) {
+        this.passwordRequired = passwordRequired;
     }
 
     public void afterPropertiesSet() {
@@ -132,19 +145,21 @@ public class JdbiShiroRealm extends AuthorizingRealm {
 
         String username = upToken.getUsername();
         if (Strings.isNullOrEmpty(username)) {
+            LOG.error("doGetAuthenticationInfo() requires a non-null, non-empty username");
             throw new AccountException("username is required by this realm.");
         }
 
-        User user;
+        ISecurityUser user;
         try {
             // No need to fetch the Roles at this point.
             user = getUserSecurityDAO().findUserWithoutRoles(username);
-        } catch (AuthenticationException ae) {
-            LOG.error("Error retrieving user. {}", ae.getMessage());
-            throw ae;
         } catch (RuntimeException ex) {
-            LOG.error("Error retrieving user '" + username + "' from database.", ex);
-            throw new UnknownAccountException("No account found for user '" + username + "'.", ex);
+            LOG.error("Error retrieving user '{}' from database. {}", username, ex.getMessage());
+            if (ex instanceof AuthenticationException) {
+                throw ex;
+            } else {
+                throw new AuthenticationException("Error retrieving user '" + username + "'.", ex);
+            }
         }
         if (user != null) {
             if (!username.equals(user.getUsername())) {
@@ -153,8 +168,8 @@ public class JdbiShiroRealm extends AuthorizingRealm {
                 throw new AccountException("database error: username mis-match");
             }
             String password = user.getPassword();
-            if (password == null) {
-                LOG.error("Database is inconsistent. Username '{}' has a null password.", username);
+            if (isPasswordRequired() && password == null) {
+                LOG.warn("Password is required and username '{}' has a null password. Treating account as disabled.", username);
                 throw new DisabledAccountException("No valid account found for user '" + username + "'.");
             }
             // About to use the PrincipalValues, set a flag.
@@ -185,15 +200,15 @@ public class JdbiShiroRealm extends AuthorizingRealm {
             throw new AuthorizationException("no principal available; no one to authorize.");
         }
 
-        LOG.debug("Retrieving Roles & Permissions for Subject (aka, User) identified by '{}'.", principalId);
+        LOG.debug("Retrieving Roles & Permissions for Subject (aka, DefaultUserImpl) identified by '{}'.", principalId);
 
-        Set<Role> roles;
+        Set<ISecurityRole> roles;
         try {
             if (principalId instanceof Long) {
-                LOG.debug("Current principalId is of type Long, treating as a User.id value.");
+                LOG.debug("Current principalId is of type Long, treating as a DefaultUserImpl.id value.");
                 roles = getUserSecurityDAO().getUserRoles((Long) principalId);
             } else if (principalId instanceof String) {
-                LOG.debug("Current principalId is of type Long, treating as a User.username value.");
+                LOG.debug("Current principalId is of type Long, treating as a DefaultUserImpl.username value.");
                 roles = getUserSecurityDAO().getUserRoles((String) principalId);
             } else {
                 LOG.error("The provided principal is of an unsupported type. This method supports Long and String typed identifiers.  Provided type was {}; provided value was: {}.", principalId.getClass().getName(), principalId);
@@ -205,8 +220,8 @@ public class JdbiShiroRealm extends AuthorizingRealm {
         }
         if (roles != null && roles.size() > 0) {
             SimpleAuthorizationInfo info = new SimpleAuthorizationInfo();
-            for (Role role : roles) {
-                LOG.debug("User: '{}', adding Role '{}'.", principalId, role);
+            for (ISecurityRole role : roles) {
+                LOG.debug("DefaultUserImpl: '{}', adding DefaultRoleImpl '{}'.", principalId, role);
                 info.addRole(role.getName());
                 info.addStringPermissions(role.getPermissions());
             }

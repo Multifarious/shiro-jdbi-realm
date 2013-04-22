@@ -7,7 +7,7 @@ import java.util.Arrays;
 
 /**
  * Project: security
- * User: ezra
+ * DefaultUserImpl: ezra
  * Date: 4/3/13
  */
 public class TestJdbiShiroRealm2 extends TestJdbiShiroRealm {

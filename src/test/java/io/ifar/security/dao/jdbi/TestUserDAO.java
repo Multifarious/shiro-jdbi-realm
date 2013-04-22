@@ -2,12 +2,12 @@ package io.ifar.security.dao.jdbi;
 
 import static org.junit.Assert.*;
 
+import io.ifar.security.realm.model.ISecurityRole;
+import io.ifar.security.realm.model.ISecurityUser;
 import org.junit.*;
 import org.skife.jdbi.v2.exceptions.UnableToExecuteStatementException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import io.ifar.security.realm.model.Role;
-import io.ifar.security.realm.model.User;
 
 import java.sql.SQLException;
 import java.util.Collections;
@@ -21,6 +21,7 @@ public class TestUserDAO {
     @BeforeClass
     public static void setupDao() {
         harness.setUp();
+        // harness.getUserDAO().setEnabledFlagUsed(false);
     }
 
     @AfterClass
@@ -31,7 +32,7 @@ public class TestUserDAO {
     @Test
     public void getFirstUser() throws SQLException
     {
-        User u = harness.getUserDAO().findUser("TEST");
+        DefaultUserImpl u = harness.getUserDAO().findUser("TEST");
         assertNotNull(u);
         assertEquals(2l, u.getRoles().size());
 
@@ -39,9 +40,19 @@ public class TestUserDAO {
     }
 
     @Test
+    public void getFirstSecurityUser() throws SQLException
+    {
+        ISecurityUser u = harness.getUserSecurityDAO().findUserWithoutRoles("TEST");
+        assertNotNull(u);
+
+        LOG.info("The TEST security user: {}", u);
+    }
+
+    @Test
     public void getFirstUser_withoutRoles() throws SQLException
     {
-        User u = harness.getUserDAO().findUser("TEST", false);
+        DefaultUserImpl u = harness.getUserDAO().findUser("TEST", false);
+        // DefaultUserImpl u = harness.getUserDAO().findUserWithoutRoles("TEST");
         assertNotNull(u);
         assertEquals(0l, u.getRoles().size());
 
@@ -51,20 +62,20 @@ public class TestUserDAO {
     @Test
     public void createAUser() // throws SQLException;
     {
-        User u = harness.getUserDAO().findUser("FOO");
+        DefaultUserImpl u = harness.getUserDAO().findUser("FOO");
         if (u != null)
         {
             harness.getUserDAO().deleteUser(u.getId());
         }
-        Role r = new Role("user", Collections.singleton("bar"));
-        u = new User(null, "FOO", "PASSWORD", Collections.singleton(r));
+        ISecurityRole r = new DefaultRoleImpl("user", Collections.singleton("bar"));
+        u = new DefaultUserImpl(null, "FOO", "PASSWORD", Collections.singleton(r));
         Long newId = harness.getUserDAO().createUser(u);
         assertNotNull(newId);
         assertEquals(newId, u.getId());
 
         LOG.info("Freshly minted user: {}", u);
 
-        User fromDb = harness.getUserDAO().findUser("FOO");
+        DefaultUserImpl fromDb = harness.getUserDAO().findUser("FOO");
         assertEquals(u, fromDb);
         assertEquals(u.getRoles(), fromDb.getRoles());
 
@@ -77,12 +88,12 @@ public class TestUserDAO {
     @Test
     public void createUser_noRoles() // throws SQLException;
     {
-        User u = harness.getUserDAO().findUser("FOO");
+        DefaultUserImpl u = harness.getUserDAO().findUser("FOO");
         if (u != null)
         {
             harness.getUserDAO().deleteUser(u.getId());
         }
-        u = new User(null, "FOO", "PASSWORD", null);
+        u = new DefaultUserImpl(null, "FOO", "PASSWORD", null);
         Long newId = harness.getUserDAO().createUser(u);
         assertNotNull(newId);
         assertEquals(newId, u.getId());
@@ -90,7 +101,7 @@ public class TestUserDAO {
 
         LOG.info("Freshly minted user (no roles): {}", u);
 
-        User fromDb = harness.getUserDAO().findUser("FOO");
+        DefaultUserImpl fromDb = harness.getUserDAO().findUser("FOO");
         assertEquals(u, fromDb);
         assertEquals(u.getRoles(), fromDb.getRoles());
 
@@ -102,13 +113,13 @@ public class TestUserDAO {
     @Test(expected = UnableToExecuteStatementException.class)
     public void createUser_noSuchRole() // throws SQLException;
     {
-        User u = harness.getUserDAO().findUser("FOO");
+        DefaultUserImpl u = harness.getUserDAO().findUser("FOO");
         if (u != null)
         {
             harness.getUserDAO().deleteUser(u.getId());
         }
-        Role r = new Role("fakey", Collections.singleton("blah"));
-        u = new User(null, "FOO", "PASSWORD", Collections.singleton(r));
+        ISecurityRole r = new DefaultRoleImpl("fakey", Collections.singleton("blah"));
+        u = new DefaultUserImpl(null, "FOO", "PASSWORD", Collections.singleton(r));
 
         // THIS should fail in DBs that support FK constraints.
         Long newId = harness.getUserDAO().createUser(u);
@@ -117,7 +128,7 @@ public class TestUserDAO {
 
         LOG.info("Freshly minted user: {}", u);
 
-        User fromDb = harness.getUserDAO().findUser("FOO");
+        DefaultUserImpl fromDb = harness.getUserDAO().findUser("FOO");
         assertEquals("UserId and username match.", u, fromDb);
 
         // IN other DBs it fails here.  Oops
@@ -133,13 +144,13 @@ public class TestUserDAO {
     @Test(expected = IllegalArgumentException.class)
     public void createUser_IdSpecified() // throws SQLException;
     {
-        User u = harness.getUserDAO().findUser("FOO");
+        DefaultUserImpl u = harness.getUserDAO().findUser("FOO");
         if (u != null)
         {
             harness.getUserDAO().deleteUser(u.getId());
         }
-        Role r = new Role("user", Collections.singleton("bar"));
-        u = new User(1001l, "FOO", "PASSWORD", Collections.singleton(r));
+        ISecurityRole r = new DefaultRoleImpl("user", Collections.singleton("bar"));
+        u = new DefaultUserImpl(1001l, "FOO", "PASSWORD", Collections.singleton(r));
         harness.getUserDAO().createUser(u);
     }
 
@@ -149,12 +160,12 @@ public class TestUserDAO {
     @Test(expected = UnableToExecuteStatementException.class)
     public void createUser_valueTooLongForColumn() // throws SQLException;
     {
-        User u = harness.getUserDAO().findUser("FOO");
+        DefaultUserImpl u = harness.getUserDAO().findUser("FOO");
         if (u != null) {
             harness.getUserDAO().deleteUser(u.getId());
         }
-        Role r = new Role("user", Collections.singleton("bar"));
-        u = new User(null, "FOO",
+        ISecurityRole r = new DefaultRoleImpl("user", Collections.singleton("bar"));
+        u = new DefaultUserImpl(null, "FOO",
                 "A_TOO_LONG_PASSWORD"
                         + "_0123456789_0123456789_0123456789_0123456789_0123456789"
                         + "_0123456789_0123456789_0123456789_0123456789_0123456789"
@@ -173,7 +184,7 @@ public class TestUserDAO {
     @Test
     public void deleteAUser()
     {
-        User aU = harness.getUserDAO().getUser(102l);
+        DefaultUserImpl aU = harness.getUserDAO().getUser(102l);
         assertEquals("Username is 'Arnold'", "Arnold", aU.getUsername());
         harness.getUserDAO().deleteUser(102l);
         assertNull("No such user expect in DB after delete.", harness.getUserDAO().getUser(102l));
@@ -182,8 +193,8 @@ public class TestUserDAO {
     @Test
     public void testNeedToUpdateUser()
     {
-        User u1 = new User(null, "A", "B", null);
-        User u2 = new User(null, "A", "B", null);
+        DefaultUserImpl u1 = new DefaultUserImpl(null, "A", "B", null);
+        DefaultUserImpl u2 = new DefaultUserImpl(null, "A", "B", null);
 
         assertTrue(!harness.getUserDAO().needToUpdateUser(u1, u2));
         u2.setUsername("Q");
@@ -196,10 +207,10 @@ public class TestUserDAO {
     @Test
     public void updateAUser()
     {
-        User u = harness.getUserDAO().findUser("TEST");
+        DefaultUserImpl u = harness.getUserDAO().findUser("TEST");
 
-        Role adminRole = null;
-        for (Role r : u.getRoles())
+        ISecurityRole adminRole = null;
+        for (ISecurityRole r : u.getRoles())
         {
             if ("admin".equals(r.getName()))
             {
@@ -208,12 +219,12 @@ public class TestUserDAO {
             }
         }
         u.getRoles().remove(adminRole);
-        Role otherRole = new Role("other", Collections.singleton("gee"));
+        DefaultRoleImpl otherRole = new DefaultRoleImpl("other", Collections.singleton("gee"));
         u.getRoles().add(otherRole);
 
         harness.getUserDAO().updateUser(u);
 
-        User inDb = harness.getUserDAO().getUser(u.getId());
+        DefaultUserImpl inDb = harness.getUserDAO().getUser(u.getId());
         LOG.info("Updated user: {}", inDb);
 
         assertEquals(2, inDb.getRoles().size());
@@ -233,7 +244,7 @@ public class TestUserDAO {
     @Test(expected = UnableToExecuteStatementException.class)
     public void updateUser_nameExistsException()
     {
-        User u = harness.getUserDAO().findUser("TEST");
+        DefaultUserImpl u = harness.getUserDAO().findUser("TEST");
         u.setUsername("EXISTS");
         harness.getUserDAO().updateUser(u);
     }
@@ -245,16 +256,16 @@ public class TestUserDAO {
         SupportTransactionTests txUserDAO = harness.getDbi().onDemand(SupportTransactionTests.class);
 
         // Exception should force rollback
-        // commented-out, means: do nothing - hence we expect a User remnant.
+        // commented-out, means: do nothing - hence we expect a DefaultUserImpl remnant.
         // txUserDAO.throwException = true;
 
-        User u = harness.getUserDAO().findUser("txFOO");
+        DefaultUserImpl u = harness.getUserDAO().findUser("txFOO");
         if (u != null)
         {
             harness.getUserDAO().deleteUser(u.getId());
         }
-        Role r = new Role("user", Collections.singleton("bar"));
-        u = new User(null, "txFOO", "PASSWORD", Collections.singleton(r));
+        ISecurityRole r = new DefaultRoleImpl("user", Collections.singleton("bar"));
+        u = new DefaultUserImpl(null, "txFOO", "PASSWORD", Collections.singleton(r));
 
         Long newId = null;
         try {
@@ -263,10 +274,10 @@ public class TestUserDAO {
 
         LOG.info("Freshly minted user: {}", u);
 
-        User fromDb = harness.getUserDAO().findUser("txFOO");
+        DefaultUserImpl fromDb = harness.getUserDAO().findUser("txFOO");
         assertEquals(u, fromDb);
 
-        LOG.info("User seen via other DAO: {}", fromDb);
+        LOG.info("DefaultUserImpl seen via other DAO: {}", fromDb);
         assertEquals("No roles should have been saved.", 0, fromDb.getRoles().size());
 
         harness.getUserDAO().deleteUser(newId);
@@ -283,20 +294,20 @@ public class TestUserDAO {
         // Exception should force rollback
         txUserDAO.throwException = true;
 
-        User u = harness.getUserDAO().findUser("txFOO");
+        DefaultUserImpl u = harness.getUserDAO().findUser("txFOO");
         if (u != null)
         {
             harness.getUserDAO().deleteUser(u.getId());
         }
-        Role r = new Role("user", Collections.singleton("bar"));
-        u = new User(null, "txFOO", "PASSWORD", Collections.singleton(r));
+        ISecurityRole r = new DefaultRoleImpl("user", Collections.singleton("bar"));
+        u = new DefaultUserImpl(null, "txFOO", "PASSWORD", Collections.singleton(r));
 
         try {
             txUserDAO.createUser(u);
         } catch (Exception ignore) {}
 
-        User fromDb = harness.getUserDAO().findUser("txFOO");
-        assertNull("User should not have been persisted.", fromDb);
+        DefaultUserImpl fromDb = harness.getUserDAO().findUser("txFOO");
+        assertNull("DefaultUserImpl should not have been persisted.", fromDb);
 
         harness.getDbi().close(txUserDAO);
     }

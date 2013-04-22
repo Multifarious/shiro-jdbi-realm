@@ -1,6 +1,8 @@
 package io.ifar.security.realm;
 
 import io.ifar.security.dao.jdbi.DatabaseUtils;
+import io.ifar.security.dao.jdbi.DefaultUserImpl;
+import io.ifar.security.realm.model.ISecurityRole;
 import org.apache.shiro.authc.AuthenticationException;
 import org.apache.shiro.authc.AuthenticationInfo;
 import org.apache.shiro.authc.UsernamePasswordToken;
@@ -9,8 +11,7 @@ import org.apache.shiro.subject.Subject;
 import org.junit.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import io.ifar.security.realm.model.Role;
-import io.ifar.security.realm.model.User;
+import io.ifar.security.dao.jdbi.DefaultRoleImpl;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -20,7 +21,7 @@ import static org.junit.Assert.*;
 import static org.junit.Assert.assertEquals;
 
 /**
- * User: ezra
+ * DefaultUserImpl: ezra
  * Date: 3/26/13
  */
 public class TestJdbiShiroRealm extends AbstractShiroTest {
@@ -46,9 +47,9 @@ public class TestJdbiShiroRealm extends AbstractShiroTest {
         return "AClearPassword#123";
     }
 
-    protected Set<Role> getRoles() {
+    protected Set<ISecurityRole> getRoles() {
         // Permissions aren't involved in user creation, just the role name
-        return Collections.singleton(new Role("user"));
+        return Collections.<ISecurityRole>singleton(new DefaultRoleImpl("user"));
     }
 
     protected Logger log()
@@ -73,6 +74,7 @@ public class TestJdbiShiroRealm extends AbstractShiroTest {
     @AfterClass
     public static void tearDown() {
         AbstractShiroTest.tearDownShiro();
+        harness.getDbi().close(realm.getUserSecurityDAO());
         harness.tearDown();
         realm = null;
     }
@@ -104,24 +106,24 @@ public class TestJdbiShiroRealm extends AbstractShiroTest {
         }
     }
 
-    protected User fetchOrCreateUser() {
-        User u = harness.getUserDAO().findUser(getUsername());
+    protected DefaultUserImpl fetchOrCreateUser() {
+        DefaultUserImpl u = harness.getUserDAO().findUser(getUsername());
         if (u == null) {
             // We don't modify this user during tests, so if it already exists, just use it as-is. Otherwise:
-            u = new User(null, getUsername(), passwordService.encryptPassword(getPlainTextPassword()), getRoles());
+            u = new DefaultUserImpl(null, getUsername(), passwordService.encryptPassword(getPlainTextPassword()), getRoles());
             harness.getUserDAO().createUser(u);
             assertNotNull(u.getId());  // persisted
         }
         return u;
     }
 
-    protected void checkStoredPrincipal(User u, Object p) {
+    protected void checkStoredPrincipal(DefaultUserImpl u, Object p) {
         assertEquals("CurrentUser is expected to store the user's id as the principal.", u.getId(), p);
     }
 
     @Test
     public void loginTest() {
-        User u = fetchOrCreateUser();
+        DefaultUserImpl u = fetchOrCreateUser();
         log().info("User under test: {}", u);
         log().info("Hashed password: {}", u.getPassword());
 
@@ -139,7 +141,7 @@ public class TestJdbiShiroRealm extends AbstractShiroTest {
 
     @Test(expected = AuthenticationException.class)
     public void wrongPassword() {
-        User u = fetchOrCreateUser();
+        DefaultUserImpl u = fetchOrCreateUser();
         // This is what would be provided on login with the wrong password.
         UsernamePasswordToken upToken = new UsernamePasswordToken(u.getUsername(), "WrongPasssord");
         getSecurityManager().authenticate(upToken);
@@ -147,7 +149,7 @@ public class TestJdbiShiroRealm extends AbstractShiroTest {
 
     @Test(expected = AuthenticationException.class)
     public void preHashedPassword() {
-        User u = fetchOrCreateUser();
+        DefaultUserImpl u = fetchOrCreateUser();
         // This is what would be provided on login with the wrong password.
         UsernamePasswordToken upToken = new UsernamePasswordToken(u.getUsername(), u.getPassword());
         getSecurityManager().authenticate(upToken);
@@ -184,7 +186,7 @@ public class TestJdbiShiroRealm extends AbstractShiroTest {
 
     @Test
     public void authZAUserWithHashedPass() {
-        User u = fetchOrCreateUser();
+        DefaultUserImpl u = fetchOrCreateUser();
 
         // This is what would be provided on login.
         UsernamePasswordToken upToken = new UsernamePasswordToken(u.getUsername(), getPlainTextPassword());
@@ -200,7 +202,7 @@ public class TestJdbiShiroRealm extends AbstractShiroTest {
 
     @Test
     public void authorizeUser() {
-        User u = fetchOrCreateUser();
+        DefaultUserImpl u = fetchOrCreateUser();
 
         Subject currentUser = getSubject();
         if (!currentUser.isAuthenticated()) {
@@ -223,10 +225,10 @@ public class TestJdbiShiroRealm extends AbstractShiroTest {
     @Test
     public void authorizeUserNoRoles() {
         String usernm = getUsername() + "_x";
-        User u = harness.getUserDAO().findUser(usernm);
+        DefaultUserImpl u = harness.getUserDAO().findUser(usernm);
         if (u == null) {
             // We don't modify this user during tests, so if it already exists, just use it as-is. Otherwise:
-            u = new User(null, usernm, passwordService.encryptPassword(getPlainTextPassword()), null);
+            u = new DefaultUserImpl(null, usernm, passwordService.encryptPassword(getPlainTextPassword()), null);
             u.setId(harness.getUserDAO().createUser(u));
             assertNotNull(u.getId());  // persisted
         }
@@ -237,8 +239,8 @@ public class TestJdbiShiroRealm extends AbstractShiroTest {
             currentUser.login(upToken);
             assertTrue(currentUser.isAuthenticated());
         } else {
-            log().error("User should not be authenticated at this point.");
-            throw new RuntimeException("User was authenticated before login !?!");
+            log().error("DefaultUserImpl should not be authenticated at this point.");
+            throw new RuntimeException("DefaultUserImpl was authenticated before login !?!");
         }
         checkStoredPrincipal(u, currentUser.getPrincipal());
 

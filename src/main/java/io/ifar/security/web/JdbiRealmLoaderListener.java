@@ -27,7 +27,7 @@ import static com.google.common.base.Preconditions.checkArgument;
  * </p>
  *
  * Project: jdbi-realm
- * User: ezra
+ * DefaultUserImpl: ezra
  * Date: 4/6/13
  */
 public class JdbiRealmLoaderListener implements ServletContextListener {

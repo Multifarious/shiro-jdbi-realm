@@ -1,6 +1,7 @@
 package io.ifar.security.realm;
 
-import io.ifar.security.realm.model.Role;
+import io.ifar.security.dao.jdbi.DefaultRoleImpl;
+import io.ifar.security.realm.model.ISecurityRole;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -10,7 +11,7 @@ import java.util.Set;
 
 /**
  * Project: security
- * User: ezra
+ * DefaultUserImpl: ezra
  * Date: 4/3/13
  */
 public class TestJdbiShiroRealmUsernameId extends TestJdbiShiroRealmUsername {
@@ -31,10 +32,10 @@ public class TestJdbiShiroRealmUsernameId extends TestJdbiShiroRealmUsername {
         return new String[]{"super", "foo", "bar"};
     }
 
-    protected Set<Role> getRoles()
+    protected Set<ISecurityRole> getRoles()
     {
         // Permissions aren't involved in user creation, just the role name
-        return new HashSet<>(asList(new Role("admin"), new Role("user")));
+        return new HashSet<ISecurityRole>(asList(new DefaultRoleImpl("admin"), new DefaultRoleImpl("user")));
     }
 
     // Should be fine to have the username be the principal.

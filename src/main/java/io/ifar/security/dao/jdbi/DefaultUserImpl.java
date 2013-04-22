@@ -1,43 +1,47 @@
-package io.ifar.security.realm.model;
+package io.ifar.security.dao.jdbi;
 
 import com.google.common.base.Objects;
+import io.ifar.security.realm.model.ISecurityRole;
+import io.ifar.security.realm.model.ISecurityUser;
 
 import java.util.HashSet;
 import java.util.Set;
 
 /**
- * This class represents a User of the system.  In the context of security, the user is mapped to a "subject."
+ * This class represents a ISecurityUser of the system and the user's set of ISecurityRole objects.
+ * In the context of Shiro, the user is mapped to a "subject."
  *
  * @see org.apache.shiro.subject.Subject
  */
-public class User extends BaseEntity {
+public class DefaultUserImpl implements ISecurityUser {
 
     private Long id;
     private String username;
     private String password;
-    private Set<Role> roles = new HashSet<>();
+    private Set<ISecurityRole> roles = new HashSet<>();
 
-    public User()
+    public DefaultUserImpl()
     {
     }
 
-    public User(Long id, String username, String password, Set<Role> roles)
+    public DefaultUserImpl(Long id, String username, String password, Set<ISecurityRole> roles)
     {
         this.id = id;
         this.username = username;
         this.password = password;
-        this.roles = (roles != null ? roles : new HashSet<Role>());
+        this.roles = (roles != null ? roles : new HashSet<ISecurityRole>());
     }
 
+    @Override
     public Long getId() {
         return id;
     }
 
     /**
-     * Sets the User's id.  The id is a required field.
+     * Sets the DefaultUserImpl's id.  The id is a required field.
      * Normally this is assigned by the backing database.
      *
-     * @param id User's assigned primary key identifier
+     * @param id DefaultUserImpl's assigned primary key identifier
      */
     public void setId(Long id) {
         this.id = id;
@@ -48,6 +52,7 @@ public class User extends BaseEntity {
      *
      * @return the username associated with this user account.
      */
+    @Override
     public String getUsername() {
         return username;
     }
@@ -72,6 +77,7 @@ public class User extends BaseEntity {
      *
      * @return this user's password
      */
+    @Override
     public String getPassword() {
         return password;
     }
@@ -80,12 +86,15 @@ public class User extends BaseEntity {
         this.password = password;
     }
 
-
-    public Set<Role> getRoles() {
+    /**
+     * A user of the system has an associated set of ISecurityRole instances.
+     * @return  the associated Set of ISecurityRole instances
+     */
+    public Set<ISecurityRole> getRoles() {
         return roles;
     }
 
-    public void setRoles(Set<Role> roles) {
+    public void setRoles(Set<ISecurityRole> roles) {
         this.roles = roles;
     }
 
@@ -103,12 +112,16 @@ public class User extends BaseEntity {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof User)) return false;
+        if (!(o instanceof DefaultUserImpl)) return false;
 
-        User user = (User) o;
+        DefaultUserImpl user = (DefaultUserImpl) o;
         return Objects.equal(id, user.id) && Objects.equal(username, user.username);
     }
 
+    /**
+     * Follows the contract that link {@link #equals(Object)} and {@link #hashCode()}.
+     * @return  hash code derived from id and username fields if they are not null
+     */
     @Override
     public int hashCode() {
         int result = id != null ? id.hashCode() : 0;
@@ -120,8 +133,12 @@ public class User extends BaseEntity {
      * Don't show value of password fields.
      */
     @Override
+    public String toString() {
+        return toStringHelper().toString();
+    }
+
     protected Objects.ToStringHelper toStringHelper() {
-        return super.toStringHelper()
+        return Objects.toStringHelper(this.getClass().getSimpleName())
                 .add("id", id)
                 .add("username", username)
                 .add("password", "********")
