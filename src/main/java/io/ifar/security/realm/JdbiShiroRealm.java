@@ -45,6 +45,7 @@ public class JdbiShiroRealm extends AuthorizingRealm {
     protected List<PrincipalValueField> principalValueFields = Arrays.asList(PrincipalValueField.USER_ID);
     protected boolean didAuthentication = false;
     protected boolean passwordRequired = true;
+    protected boolean daoFromDbi = false;
 
     /**
      * Creates a new instance with no UserDAO. Calls {@link #JdbiShiroRealm(io.ifar.security.dao.UserSecurityDAO)}
@@ -65,6 +66,7 @@ public class JdbiShiroRealm extends AuthorizingRealm {
      */
     public JdbiShiroRealm(DBI dbi) {
         this(dbi.onDemand(DefaultJdbiUserSecurityDAO.class));
+        daoFromDbi = true;
     }
 
     /**
@@ -88,7 +90,7 @@ public class JdbiShiroRealm extends AuthorizingRealm {
      */
     public JdbiShiroRealm(CredentialsMatcher matcher, UserSecurityDAO userSecurityDAO) {
         super(matcher);
-        if (userSecurityDAO != null) setUserSecurityDAO(userSecurityDAO);
+        this.userSecurityDAO = userSecurityDAO;
     }
 
     synchronized public List<PrincipalValueField> getPrincipalValueFields() {
@@ -111,11 +113,21 @@ public class JdbiShiroRealm extends AuthorizingRealm {
     }
 
     public void setDbi(DBI dbi) {
-        setUserSecurityDAO((dbi == null) ? null : dbi.onDemand(DefaultJdbiUserSecurityDAO.class));
+        this.userSecurityDAO = (dbi == null) ? null : dbi.onDemand(DefaultJdbiUserSecurityDAO.class);
+        daoFromDbi = true;
+    }
+
+    public void close(DBI dbi) {
+        if (dbi != null && userSecurityDAO != null && daoFromDbi) {
+            dbi.close(userSecurityDAO);
+            this.userSecurityDAO = null;
+            daoFromDbi = false;
+        }
     }
 
     public void setUserSecurityDAO(UserSecurityDAO UserSecurityDAO) {
         this.userSecurityDAO = UserSecurityDAO;
+        daoFromDbi = false;
     }
 
     public UserSecurityDAO getUserSecurityDAO() {

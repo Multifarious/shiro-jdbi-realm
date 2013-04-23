@@ -117,12 +117,8 @@ public class JdbiRealmLoaderListener implements ServletContextListener {
         UserSecurityDAO uDAO = null;
         for (Realm r : rsm.getRealms())
             if (r instanceof JdbiShiroRealm) {
-                LOG.info("closing JdbiShiroRealm's UserDAO instance/s.", r.getName());
-                uDAO = ((JdbiShiroRealm) r).getUserSecurityDAO();
-                if (uDAO != null) {
-                    jdbi.close(uDAO);
-                    ((JdbiShiroRealm) r).setUserSecurityDAO(null);
-                }
+                LOG.info("closing JdbiShiroRealm's DBI-based DAO instance/s.", r.getName());
+                ((JdbiShiroRealm) r).close(jdbi);
                 if (whichRealm == RealmSelector.FIRST) {
                     break;
                 }
