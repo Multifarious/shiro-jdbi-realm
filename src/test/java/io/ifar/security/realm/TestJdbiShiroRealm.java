@@ -1,6 +1,7 @@
 package io.ifar.security.realm;
 
 import io.ifar.security.dao.jdbi.DatabaseUtils;
+import io.ifar.security.dao.jdbi.DefaultRoleImpl;
 import io.ifar.security.dao.jdbi.DefaultUserImpl;
 import io.ifar.security.realm.model.ISecurityRole;
 import org.apache.shiro.authc.AuthenticationException;
@@ -8,17 +9,18 @@ import org.apache.shiro.authc.AuthenticationInfo;
 import org.apache.shiro.authc.UsernamePasswordToken;
 import org.apache.shiro.authz.AuthorizationInfo;
 import org.apache.shiro.subject.Subject;
-import org.junit.*;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import io.ifar.security.dao.jdbi.DefaultRoleImpl;
 
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Set;
 
 import static org.junit.Assert.*;
-import static org.junit.Assert.assertEquals;
 
 /**
  * DefaultUserImpl: ezra
@@ -110,7 +112,9 @@ public class TestJdbiShiroRealm extends AbstractShiroTest {
         DefaultUserImpl u = harness.getUserDAO().findUser(getUsername());
         if (u == null) {
             // We don't modify this user during tests, so if it already exists, just use it as-is. Otherwise:
-            u = new DefaultUserImpl(null, getUsername(), passwordService.encryptPassword(getPlainTextPassword()), getRoles());
+            String hashedPw = passwordService.encryptPassword(getPlainTextPassword());
+            u = new DefaultUserImpl(null, getUsername(), hashedPw, getRoles());
+            // LOG.trace("Parsably hashed password: pw={}; hash={}", getPlainTextPassword(), hashedPw);
             harness.getUserDAO().createUser(u);
             assertNotNull(u.getId());  // persisted
         }
@@ -137,6 +141,14 @@ public class TestJdbiShiroRealm extends AbstractShiroTest {
         }
         checkStoredPrincipal(u, currentUser.getPrincipal());
         currentUser.logout();
+    }
+
+    @Test
+    public void authenticateTest() {
+        DefaultUserImpl u = fetchOrCreateUser();
+        // This is what would be provided on login.
+        UsernamePasswordToken upToken = new UsernamePasswordToken(u.getUsername(), getPlainTextPassword());
+        getSecurityManager().authenticate(upToken);
     }
 
     @Test(expected = AuthenticationException.class)

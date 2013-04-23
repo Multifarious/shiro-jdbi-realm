@@ -1,10 +1,10 @@
 package io.ifar.security.dao.jdbi;
 
-import static org.junit.Assert.*;
-
 import io.ifar.security.realm.model.ISecurityRole;
 import io.ifar.security.realm.model.ISecurityUser;
-import org.junit.*;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
 import org.skife.jdbi.v2.exceptions.UnableToExecuteStatementException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,16 +12,18 @@ import org.slf4j.LoggerFactory;
 import java.sql.SQLException;
 import java.util.Collections;
 
+import static org.junit.Assert.*;
+
 public class TestUserDAO {
 
     private static final Logger LOG = LoggerFactory.getLogger(TestUserDAO.class);
 
-    private static final DatabaseUtils harness = new DatabaseUtils();
+    protected static final DatabaseUtils harness = new DatabaseUtils();
 
     @BeforeClass
     public static void setupDao() {
         harness.setUp();
-        // harness.getUserDAO().setEnabledFlagUsed(false);
+        // harness.getUserDAO().setEnabledColumnUsed(false);
     }
 
     @AfterClass

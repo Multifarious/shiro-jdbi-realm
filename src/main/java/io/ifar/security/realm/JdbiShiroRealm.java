@@ -1,11 +1,11 @@
 package io.ifar.security.realm;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkState;
-
 import com.google.common.base.Strings;
+import io.ifar.security.dao.IdentifiedUserSecurityDAO;
 import io.ifar.security.dao.UserSecurityDAO;
 import io.ifar.security.dao.jdbi.DefaultJdbiUserSecurityDAO;
+import io.ifar.security.realm.model.ISecurityRole;
+import io.ifar.security.realm.model.ISecurityUser;
 import org.apache.shiro.authc.*;
 import org.apache.shiro.authc.credential.CredentialsMatcher;
 import org.apache.shiro.authc.credential.PasswordMatcher;
@@ -18,15 +18,17 @@ import org.apache.shiro.subject.SimplePrincipalCollection;
 import org.skife.jdbi.v2.DBI;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import io.ifar.security.realm.model.*;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
 
 /**
- * A Shiro security realm with DefaultUserImpl (Subject) data provided by a DAO implemented via JDBI.
- *
- * DefaultUserImpl: eze@ifar.ifario.us
- * Date: 3/26/13
+ * A Shiro security realm with ISecurityUser (Subject) data provided by a DAO implemented via JDBI.
  */
 public class JdbiShiroRealm extends AuthorizingRealm {
 
@@ -35,8 +37,7 @@ public class JdbiShiroRealm extends AuthorizingRealm {
     /**
      * Which fields from the DefaultUserImpl instance to provide as Principal identifiers to Shiro.
      */
-    public static enum PrincipalValueField
-    {
+    public static enum PrincipalValueField {
         USER_ID, USERNAME
     }
 
@@ -46,44 +47,46 @@ public class JdbiShiroRealm extends AuthorizingRealm {
     protected boolean passwordRequired = true;
 
     /**
-     * Creates a new instance with no UserDAO. Calls {@link #JdbiShiroRealm(io.ifar.security.dao.UserSecurityDAO)} passing in null.
-     *
+     * Creates a new instance with no UserDAO. Calls {@link #JdbiShiroRealm(io.ifar.security.dao.UserSecurityDAO)}
+     * passing in null.
+     * <p/>
      * <p>UserDAO would need to be set via {@link #setUserSecurityDAO(io.ifar.security.dao.UserSecurityDAO)}
      * before using the instance. </p>
      */
     public JdbiShiroRealm() {
-        this((UserSecurityDAO)null);
+        this((UserSecurityDAO) null);
     }
 
     /**
      * Create a JdbiShiroRealm using the provided DBI instance.  An onDemand UserDAO will be created
      * based on the {@link DefaultJdbiUserSecurityDAO} class and used to call {@link #JdbiShiroRealm(io.ifar.security.dao.UserSecurityDAO)}.
-     * @param dbi  DBI instance to use to create a UserDAO.
+     *
+     * @param dbi DBI instance to use to create a UserDAO.
      */
-    public JdbiShiroRealm(DBI dbi)
-    {
-         this(dbi.onDemand(DefaultJdbiUserSecurityDAO.class));
+    public JdbiShiroRealm(DBI dbi) {
+        this(dbi.onDemand(DefaultJdbiUserSecurityDAO.class));
     }
 
     /**
      * Creates an instance with the specified {@code UserSecurityDAO}.
      * Calls {@link #JdbiShiroRealm(org.apache.shiro.authc.credential.CredentialsMatcher, io.ifar.security.dao.UserSecurityDAO)}
      * passing in a new {@link PasswordMatcher} with its default settings, and {@code userSecurityDAO}.
+     *
      * @param userSecurityDAO a {@link UserSecurityDAO} used to retrieve user credentials and role/permission data.
      */
     public JdbiShiroRealm(UserSecurityDAO userSecurityDAO) {
         this(new PasswordMatcher(), userSecurityDAO);       // Default config.  Should work out of the box.
-     }
+    }
 
     /**
      * Creates an instance with the specified {@link CredentialsMatcher} and {@link UserSecurityDAO}.
      * Calls {@link AuthorizingRealm#AuthorizingRealm(org.apache.shiro.authc.credential.CredentialsMatcher)}
      * passing in {@code matcher}.  If {@code userSecurityDAO} is not null, it is set via {@link #setUserSecurityDAO(io.ifar.security.dao.UserSecurityDAO)}}.
-     * @param matcher the {@link CredentialsMatcher} to use for authenticating users.
+     *
+     * @param matcher         the {@link CredentialsMatcher} to use for authenticating users.
      * @param userSecurityDAO the {@link UserSecurityDAO} to use for looking up {@link io.ifar.security.dao.jdbi.DefaultUserImpl}s.
      */
-    public JdbiShiroRealm(CredentialsMatcher matcher, UserSecurityDAO userSecurityDAO)
-    {
+    public JdbiShiroRealm(CredentialsMatcher matcher, UserSecurityDAO userSecurityDAO) {
         super(matcher);
         if (userSecurityDAO != null) setUserSecurityDAO(userSecurityDAO);
     }
@@ -95,6 +98,7 @@ public class JdbiShiroRealm extends AuthorizingRealm {
     synchronized public void setPrincipalValueFields(List<PrincipalValueField> principalValueFields) {
         checkArgument(principalValueFields != null && principalValueFields.size() > 0,
                 "principalValueFields argument must contain at least one value");
+        assert (principalValueFields != null);
         for (PrincipalValueField pv : this.principalValueFields) {
             if (didAuthentication) {
                 if (!principalValueFields.contains(pv)) {
@@ -106,8 +110,7 @@ public class JdbiShiroRealm extends AuthorizingRealm {
         this.principalValueFields = principalValueFields;
     }
 
-    public void setDbi(DBI dbi)
-    {
+    public void setDbi(DBI dbi) {
         setUserSecurityDAO((dbi == null) ? null : dbi.onDemand(DefaultJdbiUserSecurityDAO.class));
     }
 
@@ -121,6 +124,7 @@ public class JdbiShiroRealm extends AuthorizingRealm {
 
     /**
      * Whether or not a password must be provided when performing Authentication.
+     *
      * @return default value is {@code true}.
      */
     public boolean isPasswordRequired() {
@@ -134,6 +138,17 @@ public class JdbiShiroRealm extends AuthorizingRealm {
     public void afterPropertiesSet() {
         checkState(UsernamePasswordToken.class.isAssignableFrom(getAuthenticationTokenClass()),
                 "This JdbiShiroRealm is coded to work with UsernamePasswordToken instances.");
+        if (userSecurityDAO == null) {
+            throw new IllegalStateException("Configuration error: To function as a Realm instance, userSecurityDAO must not be null.");
+        }
+        if (principalValueFields == null || principalValueFields.size() < 1) {
+            throw new IllegalStateException("To function as a Realm instance, principalValueFields must not be null or empty.");
+        } else {
+            PrincipalValueField firstPVF = principalValueFields.get(0);
+            if (PrincipalValueField.USER_ID.equals(firstPVF) && (userSecurityDAO instanceof IdentifiedUserSecurityDAO)) {
+                throw new IllegalStateException("UserSecurityDAO must be an instance of the IdentifiedUserSecurityDAO sub-type for this configuration. The first PrincipalValueField is USER_ID, so the DAO needs to expose the getUserRoles((Long) principalId) method to support this usage, or the principalValueFields need to be changed to make USERNAME the primary principalId.");
+            }
+        }
     }
 
     @Override
@@ -206,7 +221,12 @@ public class JdbiShiroRealm extends AuthorizingRealm {
         try {
             if (principalId instanceof Long) {
                 LOG.debug("Current principalId is of type Long, treating as a DefaultUserImpl.id value.");
-                roles = getUserSecurityDAO().getUserRoles((Long) principalId);
+                UserSecurityDAO usd = getUserSecurityDAO();
+                if (usd instanceof IdentifiedUserSecurityDAO) {
+                    roles = ((IdentifiedUserSecurityDAO) getUserSecurityDAO()).getUserRoles((Long) principalId);
+                } else {
+                    throw new IllegalStateException("UserSecurityDAO must be an instance of the IdentifiedUserSecurityDAO sub-type for this operation. PrincipalCollection's available principal is of type Long, the DAO needs to expose the getUserRoles((Long) principalId) method to support this usage, or change the principalValueFields to make USERNAME the primary principalId.");
+                }
             } else if (principalId instanceof String) {
                 LOG.debug("Current principalId is of type Long, treating as a DefaultUserImpl.username value.");
                 roles = getUserSecurityDAO().getUserRoles((String) principalId);

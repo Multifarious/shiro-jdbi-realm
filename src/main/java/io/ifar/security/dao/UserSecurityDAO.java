@@ -11,25 +11,16 @@ import java.util.Set;
 public interface UserSecurityDAO {
 
     /**
-     * Lookup by username.  Usernames must be unique across DefaultUserImpl records in the backing store.
+     * Lookup by username.  Usernames must be unique across ISecurityUser records in the backing store.
      */
     ISecurityUser findUserWithoutRoles(String username);
 
     /**
-     * Used to retrieve the Roles associated with a DefaultUserImpl when the principal stored in the session is a numeric DefaultUserImpl
-     * identifier, such as a database primary key field.
+     * Used to retrieve the Roles associated with a ISecurityUser when the principal stored in the session is a string
+     * ISecurityUser identifier, such as the username used for authentication during login.
      *
-     * @param userId a numeric DefaultUserImpl identifier
-     * @return the Set of Roles associated with the corresponding DefaultUserImpl
-     */
-    Set<ISecurityRole> getUserRoles(Long userId);
-
-    /**
-     * Used to retrieve the Roles associated with a DefaultUserImpl when the principal stored in the session is a string DefaultUserImpl
-     * identifier, such as the username used for authentication during login.
-     *
-     * @param username a string DefaultUserImpl identifier - typically the username used when the DefaultUserImpl is authenticated
-     * @return the Set of Roles associated with the corresponding DefaultUserImpl
+     * @param username a string ISecurityUser identifier - typically the username used when the ISecurityUser is authenticated
+     * @return the Set of Roles associated with the corresponding ISecurityUser
      */
     Set<ISecurityRole> getUserRoles(String username);
 

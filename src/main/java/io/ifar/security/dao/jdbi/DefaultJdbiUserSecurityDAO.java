@@ -1,7 +1,7 @@
 package io.ifar.security.dao.jdbi;
 
 import com.google.common.base.Strings;
-import io.ifar.security.dao.UserSecurityDAO;
+import io.ifar.security.dao.IdentifiedUserSecurityDAO;
 import io.ifar.security.realm.model.ISecurityRole;
 import io.ifar.security.realm.model.ISecurityUser;
 import org.apache.shiro.authc.AuthenticationException;
@@ -21,33 +21,24 @@ import static com.google.common.base.Preconditions.checkArgument;
  * A DAO implementation that makes assumptions about table and column names backing the User and Role entities.
  * <p>
  *     Supports disabling of the primary entities - User and Role - via a Boolean column named 'enabled'.
- *     If you schema does not have such a column in the User and Role entities set call {@link #setEnabledFlagUsed(boolean)},
+ *     If you schema does not have such a column in the User and Role entities set call {@link #setEnabledColumnUsed(boolean)},
  *     passing in {@code false}.
  * </p>
  *
  *
  */
-public abstract class DefaultJdbiUserSecurityDAO implements UserSecurityDAO {
+public abstract class DefaultJdbiUserSecurityDAO implements IdentifiedUserSecurityDAO {
 
     private final static Logger LOG = LoggerFactory.getLogger(DefaultJdbiUserSecurityDAO.class);
 
-    protected final static String EnabledRolesPermissionsBaseSelectPrefix =
-            "SELECT roles.role_name AS roleName, roles_permissions.permission AS permission"
-                    + " FROM users_roles left join roles on users_roles.role_name = roles.role_name"
-                    + " left join roles_permissions on roles.role_name = roles_permissions.role_name"
-                    + " WHERE roles.enabled AND ";
     protected final static String RolesPermissionsBaseSelectPrefix =
             "SELECT roles.role_name AS roleName, roles_permissions.permission AS permission"
                     + " FROM users_roles left join roles on users_roles.role_name = roles.role_name"
                     + " left join roles_permissions on roles.role_name = roles_permissions.role_name"
                     + " WHERE ";
-    protected final static String EnabledUserRolesPermissionsBaseSelectPrefix =
-            "SELECT users.user_Id AS userId, users.username AS username, users.password AS password,"
-                    + " roles.role_name AS roleName, roles_permissions.permission AS permission"
-                    + " FROM users left join users_roles on users.user_id = users_roles.user_id"
-                    + " left join roles on users_roles.role_name = roles.role_name"
-                    + " left join roles_permissions on roles.role_name = roles_permissions.role_name"
-                    + " WHERE users.enabled AND (roles.enabled OR roles.enabled IS NULL) AND ";
+    protected final static String EnabledRolesPermissionsBaseSelectPrefix =
+            RolesPermissionsBaseSelectPrefix + "roles.enabled AND ";
+
     protected final static String UserRolesPermissionsBaseSelectPrefix =
             "SELECT users.user_Id AS userId, users.username AS username, users.password AS password,"
                     + " roles.role_name AS roleName, roles_permissions.permission AS permission"
@@ -55,10 +46,12 @@ public abstract class DefaultJdbiUserSecurityDAO implements UserSecurityDAO {
                     + " left join roles on users_roles.role_name = roles.role_name"
                     + " left join roles_permissions on roles.role_name = roles_permissions.role_name"
                     + " WHERE ";
+    protected final static String EnabledUserRolesPermissionsBaseSelectPrefix =
+            UserRolesPermissionsBaseSelectPrefix + "users.enabled AND (roles.enabled OR roles.enabled IS NULL) AND ";
 
-    protected boolean enabledFlagUsed = true;
+    protected boolean enabledColumnUsed = true;
 
-    // TODO : might be useful to make the User and Role classes pluggable.  Define an iface with the setter methods and use reflection to create a new instance.
+    // Might be useful to make the User and Role classes pluggable.  Define an iface with the setter methods and use reflection to create a new instance.
 
 
     /**
@@ -115,7 +108,7 @@ public abstract class DefaultJdbiUserSecurityDAO implements UserSecurityDAO {
 
     public DefaultUserImpl findUser(String username) {
         checkArgument(!Strings.isNullOrEmpty(username), "findUser() requires a non-null, non-empty username parameter.");
-        Iterator<UserRolePermissionJoinRow> baseResults = enabledFlagUsed
+        Iterator<UserRolePermissionJoinRow> baseResults = enabledColumnUsed
                 ? findEnabledUsersWithRolesAndPermissions(username)
                 : findUsersWithRolesAndPermissions(username);
         return extractObjectGraphFromJoinResults(baseResults);
@@ -135,7 +128,7 @@ public abstract class DefaultJdbiUserSecurityDAO implements UserSecurityDAO {
         checkArgument(!Strings.isNullOrEmpty(username),
                 "findUserWithoutRoles() requires a non-null, non-empty username parameter.");
         DefaultUserImpl u = null;
-        Iterator<DefaultUserImpl> users = isEnabledFlagUsed()
+        Iterator<DefaultUserImpl> users = isEnabledColumnUsed()
                 ? findEnabledUsersWithoutRoles(username)
                 : findUsersWithoutRoles(username);
         while (users != null && users.hasNext()) {
@@ -166,7 +159,7 @@ public abstract class DefaultJdbiUserSecurityDAO implements UserSecurityDAO {
      */
     public Set<ISecurityRole> getUserRoles(Long userId) {
         checkArgument(userId != null, "getUserRoles() requires a non-null userId parameter.");
-        Iterator<UserRolePermissionJoinRow> baseResults = isEnabledFlagUsed()
+        Iterator<UserRolePermissionJoinRow> baseResults = isEnabledColumnUsed()
                 ? getEnabledUserRolesAndPermissions(userId)
                 : getUserRolesAndPermissions(userId);
         DefaultUserImpl u = extractObjectGraphFromJoinResults(baseResults);
@@ -178,11 +171,11 @@ public abstract class DefaultJdbiUserSecurityDAO implements UserSecurityDAO {
         return u != null ? u.getRoles() : Collections.<ISecurityRole>emptySet();
     }
 
-    public boolean isEnabledFlagUsed() {
-        return enabledFlagUsed;
+    public boolean isEnabledColumnUsed() {
+        return enabledColumnUsed;
     }
 
-    public void setEnabledFlagUsed(boolean enabledFlagUsed) {
-        this.enabledFlagUsed = enabledFlagUsed;
+    public void setEnabledColumnUsed(boolean enabledColumnUsed) {
+        this.enabledColumnUsed = enabledColumnUsed;
     }
 }

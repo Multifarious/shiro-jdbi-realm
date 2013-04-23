@@ -15,7 +15,7 @@ public interface UserDAO extends UserSecurityDAO {
     /**
      * Get by primary key value.
      */
-    DefaultUserImpl getUser(Long userId);
+     DefaultUserImpl getUser(Long userId);
 
     /**
      * Lookup by username.  Return the associated Roles if the withRoles argument is true; otherwise
@@ -45,6 +45,4 @@ public interface UserDAO extends UserSecurityDAO {
      * state of the DefaultUserImpl provided as a parameter.
      */
     void updateUser(DefaultUserImpl user);
-
-    // void updateUserPassword(Long userId, String newPw);
 }
