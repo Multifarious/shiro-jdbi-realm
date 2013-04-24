@@ -211,6 +211,7 @@ public class JdbiShiroRealm extends AuthorizingRealm {
                 }
             }
             SimplePrincipalCollection spc = new SimplePrincipalCollection(principalVals, getName());
+            LOG.debug("Found user record. Returning authentication info with principal collection of: {}", spc);
             return new SimpleAuthenticationInfo(spc, password);
         } else {
             return null;
@@ -220,19 +221,21 @@ public class JdbiShiroRealm extends AuthorizingRealm {
     @Override
     protected AuthorizationInfo doGetAuthorizationInfo(PrincipalCollection principals) {
         if (principals == null) {
-            throw new AuthorizationException("PrincipalCollection argument (principals) cannot be null.");
+            LOG.error("PrincipalCollection argument (principals) should never be null. Returning null AuthorizationInfo.");
+            return null;
         }
         Object principalId = getAvailablePrincipal(principals);
         if (principalId == null) {
-            throw new AuthorizationException("no principal available; no one to authorize.");
+            LOG.error("No principal available; no one to authorize. Returning null AuthorizationInfo.");
+            return null;
         }
 
-        LOG.debug("Retrieving Roles & Permissions for Subject (aka, DefaultUserImpl) identified by '{}'.", principalId);
+        LOG.debug("Retrieving Roles & Permissions for Subject (aka, ISecurityUser) identified by '{}'.", principalId);
 
         Set<ISecurityRole> roles;
         try {
             if (principalId instanceof Long) {
-                LOG.debug("Current principalId is of type Long, treating as a DefaultUserImpl.id value.");
+                LOG.debug("Current principalId is of type Long, treating as a PrincipalValueField.USER_ID value.");
                 UserSecurityDAO usd = getUserSecurityDAO();
                 if (usd instanceof IdentifiedUserSecurityDAO) {
                     roles = ((IdentifiedUserSecurityDAO) getUserSecurityDAO()).getUserRoles((Long) principalId);
@@ -240,7 +243,7 @@ public class JdbiShiroRealm extends AuthorizingRealm {
                     throw new IllegalStateException("UserSecurityDAO must be an instance of the IdentifiedUserSecurityDAO sub-type for this operation. PrincipalCollection's available principal is of type Long, the DAO needs to expose the getUserRoles((Long) principalId) method to support this usage, or change the principalValueFields to make USERNAME the primary principalId.");
                 }
             } else if (principalId instanceof String) {
-                LOG.debug("Current principalId is of type Long, treating as a DefaultUserImpl.username value.");
+                LOG.debug("Current principalId is of type String, treating as a PrincipalValueField.USERNAME value.");
                 roles = getUserSecurityDAO().getUserRoles((String) principalId);
             } else {
                 LOG.error("The provided principal is of an unsupported type. This method supports Long and String typed identifiers.  Provided type was {}; provided value was: {}.", principalId.getClass().getName(), principalId);
@@ -250,17 +253,13 @@ public class JdbiShiroRealm extends AuthorizingRealm {
             LOG.error("Error retrieving Roles from database for user with identifier '" + principalId + "'.", ex);
             throw new AuthorizationException("No account found for user identified by '" + principalId + "'.", ex);
         }
-        if (roles != null && roles.size() > 0) {
-            SimpleAuthorizationInfo info = new SimpleAuthorizationInfo();
-            for (ISecurityRole role : roles) {
-                LOG.debug("DefaultUserImpl: '{}', adding DefaultRoleImpl '{}'.", principalId, role);
-                info.addRole(role.getName());
-                info.addStringPermissions(role.getPermissions());
-            }
-            return info;
-        } else {
-            return null;
+        SimpleAuthorizationInfo info = new SimpleAuthorizationInfo();
+        for (ISecurityRole role : roles) {
+            LOG.debug("User: '{}', adding role '{}'.", principalId, role);
+            info.addRole(role.getName());
+            info.addStringPermissions(role.getPermissions());
         }
+        return info;
     }
 
 }
