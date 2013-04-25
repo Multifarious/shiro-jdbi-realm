@@ -38,11 +38,27 @@ public class JdbiShiroRealm extends AuthorizingRealm {
      * Which fields from the DefaultUserImpl instance to provide as Principal identifiers to Shiro.
      */
     public static enum PrincipalValueField {
-        USER_ID, USERNAME
+        /**
+         *
+         */
+        USER_ID,
+        /**
+         *
+         */
+        USERNAME
     }
 
+    /**
+     * By default instances use {@link PrincipalValueField#USER_ID}, and hence store the value returned from
+     * {@link io.ifar.security.realm.model.ISecurityUser#getId()} into the Shiro {@link PrincipalCollection}.
+     * Note that this means when this realm is used to do authorization the {@link #userSecurityDAO} needs to
+     * implement the {@link IdentifiedUserSecurityDAO} interface.
+     */
+    protected static PrincipalValueField[] DEFAULT_PRINCIPAL_VALUE_FIELDS
+            = new PrincipalValueField[]{ PrincipalValueField.USER_ID };
+
     protected UserSecurityDAO userSecurityDAO = null;
-    protected List<PrincipalValueField> principalValueFields = Arrays.asList(PrincipalValueField.USER_ID);
+    protected List<PrincipalValueField> principalValueFields = Arrays.asList(DEFAULT_PRINCIPAL_VALUE_FIELDS);
     protected boolean didAuthentication = false;
     protected boolean passwordRequired = true;
     protected boolean daoFromDbi = false;
@@ -93,6 +109,14 @@ public class JdbiShiroRealm extends AuthorizingRealm {
         this.userSecurityDAO = userSecurityDAO;
     }
 
+    /**
+     * The ordered collection of {@link PrincipalValueField} values.  Order matters as the first one becomes
+     * is used as the default princpal value in the Shiro {@link PrincipalCollection} that is created on user
+     * login.
+     *
+     * @return  The List of PrincipalValueField enum values that will be used to get values from the ISecurityUser
+     * and store those values, in order, in the Shiro PrincipalCollection.
+     */
     synchronized public List<PrincipalValueField> getPrincipalValueFields() {
         return principalValueFields;
     }
@@ -112,11 +136,25 @@ public class JdbiShiroRealm extends AuthorizingRealm {
         this.principalValueFields = principalValueFields;
     }
 
+    /**
+     * Sets the {@link #userSecurityDAO} to an {@link DBI#onDemand(Class)} instance of the
+     * {@link DefaultJdbiUserSecurityDAO} class.  If you wish to use a different {@link UserSecurityDAO} or
+     * {@link IdentifiedUserSecurityDAO} implementation then either call
+     * {@link #setUserSecurityDAO(io.ifar.security.dao.UserSecurityDAO)} directly, or override this method.
+     * @param dbi  a DBI instance to use to create the {@link IdentifiedUserSecurityDAO} from the
+     *             {@link DefaultJdbiUserSecurityDAO} implementation.
+     */
     public void setDbi(DBI dbi) {
         this.userSecurityDAO = (dbi == null) ? null : dbi.onDemand(DefaultJdbiUserSecurityDAO.class);
         daoFromDbi = true;
     }
 
+    /**
+     * Closes the {@link #userSecurityDAO} if it was created via the {@link #setDbi(org.skife.jdbi.v2.DBI)} method.
+     *
+     * @param dbi A {@link DBI} instance to use to close the {@link #userSecurityDAO}.  Ordinarily it should be the
+     *            same {@link DBI} instance previously passed in to {@link #setDbi(org.skife.jdbi.v2.DBI)}.
+     */
     public void close(DBI dbi) {
         if (dbi != null && userSecurityDAO != null && daoFromDbi) {
             dbi.close(userSecurityDAO);

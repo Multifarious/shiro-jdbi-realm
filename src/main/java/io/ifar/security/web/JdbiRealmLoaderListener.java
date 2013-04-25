@@ -1,6 +1,5 @@
 package io.ifar.security.web;
 
-import io.ifar.security.dao.UserSecurityDAO;
 import io.ifar.security.realm.JdbiShiroRealm;
 import org.apache.shiro.mgt.RealmSecurityManager;
 import org.apache.shiro.realm.Realm;
@@ -20,12 +19,12 @@ import static com.google.common.base.Preconditions.checkArgument;
  * Hence we can't do this directly in the service's run() method as the servlet is still being configured at that point.
  * This ServletContextListener meets our needs and lets the configuration occur.
  * <p>
- *     This implementation assumes that there is a Shiro {@link RealmSecurityManager} instance in use.
+ * This implementation assumes that there is a Shiro {@link RealmSecurityManager} instance in use.
  * </p>
  * <p>
- *     If you use this class you must provide the shiro-web and the javax.servlet packages.
+ * If you use this class you must provide the shiro-web and the javax.servlet packages.
  * </p>
- *
+ * <p/>
  * Project: jdbi-realm
  * DefaultUserImpl: ezra
  * Date: 4/6/13
@@ -55,16 +54,22 @@ public class JdbiRealmLoaderListener implements ServletContextListener {
 
     /**
      * Constructs an instance with the provided {@link DBI} instance, and {@link RealmSelector#ALL}.
+     *
      * @param jdbi a DBI instance
      */
     public JdbiRealmLoaderListener(DBI jdbi) {
         this(jdbi, RealmSelector.ALL);
     }
 
+    public DBI getDbi() {
+        return jdbi;
+    }
+
     /**
      * Constructs an instance with the provided {@link DBI} instance, and provided {@link RealmSelector}.
-     * @param jdbi  a DBI instance, cannot be null
-     * @param whichRealm  a RealmSelector value, defaults to {@link RealmSelector#ALL}
+     *
+     * @param jdbi       a DBI instance, cannot be null
+     * @param whichRealm a RealmSelector value, defaults to {@link RealmSelector#ALL}
      */
     public JdbiRealmLoaderListener(DBI jdbi, RealmSelector whichRealm) {
         checkArgument(jdbi != null, "jdbi is a required argument");
@@ -77,28 +82,42 @@ public class JdbiRealmLoaderListener implements ServletContextListener {
     }
 
     /**
-     * Gets the RealmSecurityManager from the Shiro WebEnvironment. The configured Shiro SecurityManager must be an instance of {@link RealmSecurityManager}.
+     * Gets the RealmSecurityManager from the Shiro WebEnvironment. The configured Shiro SecurityManager must be an
+     * instance of {@link RealmSecurityManager}.
+     *
      * @param sce used to get the ServletContext and from it the WebEnvironment.
      * @return the Shiro {@code SecurityManager} cast to {@link RealmSecurityManager}
      */
-    protected RealmSecurityManager getRealmSecurityManager(ServletContextEvent sce)
-    {
+    protected RealmSecurityManager getRealmSecurityManager(ServletContextEvent sce) {
         WebEnvironment we = WebUtils.getWebEnvironment(sce.getServletContext());
         return (RealmSecurityManager) we.getSecurityManager();
     }
 
+
     /**
+     * Subclasses should override this method to change how Realm/s are initialized.
+     * Subclass implementations should ordinarily call this super impl.
+     * <p>
+     *     This implementation calls {@link JdbiShiroRealm#setDbi(org.skife.jdbi.v2.DBI)},
+     *     passing in the {@code DBI} instance from our own {@link #getDbi()} method.
+     * </p>
      *
+     * @param realm the JdbiShiroRealm or subclass thereof being initialized
+     */
+    protected void initializeRealm(JdbiShiroRealm realm) {
+        LOG.debug("initializing JdbiShiroRealm '{}' with DBI instance", realm.getName());
+        realm.setDbi(getDbi());
+    }
+
+    /**
      * @param sce used to get the SecurityManager that has the Realms
      */
     @Override
     public void contextInitialized(ServletContextEvent sce) {
         RealmSecurityManager rsm = getRealmSecurityManager(sce);
-        for (Realm r : rsm.getRealms())
-        {
+        for (Realm r : rsm.getRealms()) {
             if (r instanceof JdbiShiroRealm) {
-                LOG.info("initializing JdbiShiroRealm '{}' with DBI instance", r.getName());
-                ((JdbiShiroRealm)r).setDbi(jdbi);
+                initializeRealm((JdbiShiroRealm) r);
                 if (whichRealm == RealmSelector.FIRST) {
                     break;
                 }
@@ -108,17 +127,32 @@ public class JdbiRealmLoaderListener implements ServletContextListener {
     }
 
     /**
+     * Subclasses should override this method to change how Realm/s are tidied up after use.
+     * Subclass implementations should ordinarily call this super impl.
+     * <p>
+     *     This implementation calls {@link JdbiShiroRealm#close(org.skife.jdbi.v2.DBI)},
+     *     passing in the {@code DBI} instance from our own {@link #getDbi()} method.
+
+     * </p>
+     *
+     * @param realm the JdbiShiroRealm or subclass thereof that will no longer be used.
+     */
+    protected void destroyRealm(JdbiShiroRealm realm) {
+        LOG.debug("closing JdbiShiroRealm's DBI-based DAO instance/s.", realm.getName());
+        realm.close(getDbi());
+    }
+
+    /**
      * When the app shuts down we close the UserDAOs on the JdbiShiroRealm instances we initialized.
+     *
      * @param sce used to get the SecurityManager that has the Realms
      */
     @Override
     public void contextDestroyed(ServletContextEvent sce) {
         RealmSecurityManager rsm = getRealmSecurityManager(sce);
-        UserSecurityDAO uDAO = null;
         for (Realm r : rsm.getRealms())
             if (r instanceof JdbiShiroRealm) {
-                LOG.info("closing JdbiShiroRealm's DBI-based DAO instance/s.", r.getName());
-                ((JdbiShiroRealm) r).close(jdbi);
+                destroyRealm((JdbiShiroRealm) r);
                 if (whichRealm == RealmSelector.FIRST) {
                     break;
                 }
