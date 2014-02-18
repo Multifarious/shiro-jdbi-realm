@@ -14,12 +14,12 @@
 
     <groupId>io.ifar.shiro-jdbi-realm</groupId>
     <artifactId>shiro-jdbi-realm</artifactId>
-    <version>0</version>
+    <version>1-SNAPSHOT</version>
 
     <scm>
         <url>https://github.com/Multifarious/shiro-jdbi-realm.git</url>
         <developerConnection>scm:git:git@github.com:Multifarious/shiro-jdbi-realm.git</developerConnection>
-      <tag>shiro-jdbi-realm-0</tag>
+      <tag>HEAD</tag>
   </scm>
 
     <organization>
