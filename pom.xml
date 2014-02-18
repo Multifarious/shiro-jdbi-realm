@@ -4,28 +4,29 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>io.ifar</groupId>
+    <name>Shiro JDBI Realm</name>
+    <description>Database-backed Shiro Realm using DBI for database access.</description>
+    <url>https://github.com/Multifarious/shiro-jdbi-realm</url>
+    <developers>
+        <developer>
+            <organization>Multifarious, Inc.</organization>
+            <organizationUrl>http://mult.ifario.us</organizationUrl>
+        </developer>
+    </developers>
+
+    <groupId>io.ifar.shiro-jdbi-realm</groupId>
     <artifactId>shiro-jdbi-realm</artifactId>
-    <version>0.0.2-SNAPSHOT</version>
+    <version>0-SNAPSHOT</version>
 
     <scm>
         <url>https://github.com/Multifarious/shiro-jdbi-realm.git</url>
         <developerConnection>scm:git:git@github.com:Multifarious/shiro-jdbi-realm.git</developerConnection>
     </scm>
 
-    <name>Shiro JDBI Realm</name>
-    <description>Implements a database-backed Shiro Realm using DBI for database access.</description>
-    <inceptionYear>2013</inceptionYear>
-
     <organization>
         <name>Multifarious, Inc.</name>
         <url>http://mult.ifario.us/</url>
     </organization>
-    <developers>
-        <developer>
-            <name>Ezra Epstein</name>
-        </developer>
-    </developers>
 
     <licenses>
         <license>
@@ -36,9 +37,8 @@
     </licenses>
 
     <properties>
-        <guava.version>14.0.1</guava.version>
-
-        <jdbi.version>2.47</jdbi.version>
+        <guava.version>16.0.1</guava.version>
+        <jdbi.version>2.53</jdbi.version>
         <shiro.version>1.2.1</shiro.version>
         <dropwizard.version>0.6.2</dropwizard.version>
         <slf4j.version>1.7.4</slf4j.version>
@@ -161,17 +161,12 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
-                    <version>3.0</version>
+                    <version>3.1</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-jar-plugin</artifactId>
-                    <version>2.4</version>
-                </plugin>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-surefire-plugin</artifactId>
-                    <version>2.14</version>
+                    <version>2.3.2</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
@@ -179,9 +174,58 @@
                     <version>2.2.1</version>
                 </plugin>
                 <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>buildnumber-maven-plugin</artifactId>
+                    <version>1.2</version>
+                </plugin>
+                <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-install-plugin</artifactId>
+                    <version>2.5.1</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-javadoc-plugin</artifactId>
+                    <version>2.9.1</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-deploy-plugin</artifactId>
+                    <version>2.8</version>
+                </plugin>
+                <plugin>
+                    <artifactId>maven-release-plugin</artifactId>
+                    <version>2.4.2</version>
+                    <configuration>
+                        <arguments>-Dgpg.passphrase=${gpg.passphrase}</arguments>
+                        <providerImplementations>
+                            <git>jgit</git>
+                        </providerImplementations>
+                    </configuration>
+                    <dependencies>
+                        <dependency>
+                            <groupId>org.apache.maven.scm</groupId>
+                            <artifactId>maven-scm-provider-jgit</artifactId>
+                            <version>1.9</version>
+                        </dependency>
+                    </dependencies>
+                </plugin>
+                <plugin>
                     <artifactId>maven-scm-plugin</artifactId>
-                    <version>1.8.1</version>
+                    <version>1.9</version>
+                    <configuration>
+                        <connectionType>developerConnection</connectionType>
+                        <providerImplementations>
+                            <git>jgit</git>
+                        </providerImplementations>
+                    </configuration>
+                    <dependencies>
+                        <dependency>
+                            <groupId>org.apache.maven.scm</groupId>
+                            <artifactId>maven-scm-provider-jgit</artifactId>
+                            <version>1.9</version>
+                        </dependency>
+                    </dependencies>
                 </plugin>
             </plugins>
         </pluginManagement>
@@ -252,5 +296,52 @@
             </plugin>
         </plugins>
     </build>
+
+
+    <profiles>
+        <profile>
+            <id>release-sign-artifacts</id>
+            <activation>
+                <property>
+                    <name>performRelease</name>
+                    <value>true</value>
+                </property>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-gpg-plugin</artifactId>
+                        <version>1.4</version>
+                        <configuration>
+                            <passphrase>${gpg.passphrase}</passphrase>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>sign-artifacts</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>sign</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+
+    <distributionManagement>
+        <snapshotRepository>
+            <id>sonatype-nexus-snapshots</id>
+            <name>Sonatype Nexus snapshot repository</name>
+            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+        </snapshotRepository>
+        <repository>
+            <id>sonatype-nexus-staging</id>
+            <name>Sonatype Nexus release repository</name>
+            <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+        </repository>
+    </distributionManagement>
 
 </project>
